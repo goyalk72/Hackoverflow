@@ -48,7 +48,7 @@ def generateOTP(data):
     return True
 
 @app.route('/verifyOTP')
-def verify(data):
+def verifyOTP(data):
 
     """Verify the OTP
        input : {email : "", otp : ""}
@@ -78,11 +78,11 @@ def verify(data):
             return False
 
 
-@app.route('/updateDatabase')
-def updateDatabase(data):
-
-    """Insert the record into form table
-       input : {
+@app.route('/addComplaint')
+def addComplaint(data):
+    """
+        Insert the record into form table
+        input :{
                     'firstName': "",
                     'lastName' : "",
                     'email' : "",
@@ -96,7 +96,7 @@ def updateDatabase(data):
     """
 
     mydb = mysql.connector.connect(user='nkaushal', password='',
-                                   host='127.0.0.1', database='mydatabse')
+                                   host='127.0.0.1', database='mydatabase')
 
     mycursor = mydb.cursor()
 
@@ -109,9 +109,15 @@ def updateDatabase(data):
     numOfPotholes = data['numOfPotholes']
     description = data['description']
 
-    sql = "INSERT INTO mydatabase.formtable (firstName, lastName, email, phone, location, pincode, numOfPotholes, description) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')"
+    query = "select * from mydatabase.formtable where pincode = '%s'" %pincode
+    mycursor.execute(query)
 
-    values = (firstName, lastName, email, phone, location, pincode, numOfPotholes, description)
+    complaint_no = len(mycursor.fetchall()) + 1
+    complaintId = pincode + '/' + str(complaint_no)
+
+    sql = "INSERT INTO mydatabase.formtable (firstName, lastName, email, phone, location, pincode, numOfPotholes, description, complaintId) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')"
+
+    values = (firstName, lastName, email, phone, location, pincode, numOfPotholes, description, complaintId)
 
     mycursor.execute(sql, values)
 
@@ -126,23 +132,23 @@ def updateDatabase(data):
 @app.route('/showReplies')
 def addReply(data):
 
-    """Function for admin to add the reply to a complaint
-       input : {email: "" , complaintId: "", reply: ""}
-       output: bool
+    """
+        Function for admin to add the reply to a complaint
+        input : {complaintId: "", reply: ""}
+        output: bool
     """
 
     mydb = mysql.connector.connect(user='nkaushal', password='',
-                                   host='127.0.0.1', database='mydatabse')
+                                   host='127.0.0.1', database='mydatabase')
 
     mycursor = mydb.cursor()
 
-    email = data['email']
     reply = data['reply']
     complaintId = data['complaintId']
 
     replyDate = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    new_sql = "INSERT INTO mydatabase.replies (emailId, reply, complaintId, replyDate) VALUES ('%s', '%s', '%s', '%s')" % (email, reply, complaintId, replyDate)
+    new_sql = "INSERT INTO mydatabase.replies (reply, complaintId, replyDate) VALUES ( '%s', '%s', '%s')" % (reply, complaintId, replyDate)
 
     mycursor.execute(new_sql)
 
@@ -153,38 +159,79 @@ def addReply(data):
     return True
 
 
-@app.route('/displayQueries')
-def displayQueries(data): 
+@app.route('/displayComplaintsToUser')
+def displayComplaintsToUser(data): 
 
     """ Displays replies to a particular user
         input: {email: ""}
-        output: {email: 
-                    [ 
-                        {datetime: reply},
-                        {datetime: reply}
-                    ]
+        output: {complaintId:
+                    {
+                        'firstName': "",
+                        'lastName' : "",
+                        'email' : "",
+                        'phone' : "",
+                        'location' : "",
+                        'pincode' : "",
+                        'numberOfPotholes' : "",
+                        'description' : ""
+                        'reply' : [
+                            {
+                                "date": date
+                                "reply": reply
+                            }
+                            {
+                                "date": date
+                                "reply": reply
+                            }
+                        ]
+                    },
+                complaintId:
+                    {
+                        ...
+                    }
                 }
     """
 
     mydb = mysql.connector.connect(user='nkaushal', password='',
-                                   host='127.0.0.1', database='mydatabse')
+                                   host='127.0.0.1', database='mydatabase')
 
     mycursor = mydb.cursor()
 
     email = data['email']
 
-    sql = "SELECT reply FROM mydatabase.replies WHERE emailId = '%s'" %(email)
+    sql = "SELECT * FROM mydatabase.formtable WHERE emailId = '%s'" %(email)
 
     mycursor.execute(sql)
 
     ans = mycursor.fetchall()
 
     finalAns = {}
-
-    finalAns[email] = []
-
     for entry in ans:
-        finalAns[email].append({entry[-1] : entry[1]})
+
+        cid = entry[-1]
+        finalAns[cid] = {}
+
+        finalAns[cid]['email'] = entry[2]
+        finalAns[cid]['firstName'] = entry[0]
+        finalAns[cid]['lastName'] = entry[1]
+        finalAns[cid]['phone'] = entry[3]
+        finalAns[cid]['location'] = entry[4]
+        finalAns[cid]['pincode'] = entry[5]
+        finalAns[cid]['numberOfPotholes'] = entry[6]
+        finalAns[cid]['description'] = entry[7]
+
+        sql_1 = "SELECT * FROM replies WHERE complaintId = '%s'" % (cid)
+
+        mycursor.execute(sql_1)
+
+        ans_2 = mycursor.fetchall()
+
+        replyList = []
+
+        for row in ans_2:
+            replyList.append({"date": row[-1], "reply": row[1]})
+
+        finalAns[cid]['reply'] = replyList
 
     mydb.close()
 
@@ -200,7 +247,7 @@ def authAdmin(data):
     """
 
     mydb = mysql.connector.connect(user='nkaushal', password='',
-                                   host='127.0.0.1', database='mydatabse')
+                                   host='127.0.0.1', database='mydatabase')
 
     mycursor = mydb.cursor()
 
@@ -227,14 +274,14 @@ def authAdmin(data):
 
 @app.route('/registerAdmin')
 def registerAdmin(data):
-
+    # not being used
     """ To register the admin
         input: {id: "", password: ""}
         output: bool 
     """
 
     mydb = mysql.connector.connect(user='nkaushal', password='',
-                                   host='127.0.0.1', database='mydatabse')
+                                   host='127.0.0.1', database='mydatabase')
 
     mycursor = mydb.cursor()
 
@@ -252,8 +299,8 @@ def registerAdmin(data):
     return True
 
 
-@app.route('/displayEverything')
-def displayEverything(data = None):
+@app.route('/displayComplaintsToAdmin')
+def displayComplaintsToAdmin(data = None):
 
     """ Display all complaints for the admin
         input: None
@@ -269,8 +316,12 @@ def displayEverything(data = None):
                             'description' : ""
                             'reply' : [
                                 {
-                                    date: reply1,
-                                    date: reply2
+                                    "date": date
+                                    "reply": reply1
+                                }
+                                {
+                                    "date": date
+                                    "reply": reply2
                                 }
                             ]
                         }
@@ -313,7 +364,7 @@ def displayEverything(data = None):
         replyList = []
 
         for row in ans_2:
-            replyList.append({row[-1]: row[1]})
+            replyList.append({"date": row[-1], "reply": row[1]})
 
         finalAns[cid]['reply'] = replyList
 
@@ -323,8 +374,6 @@ def displayEverything(data = None):
 
 
     
-
-
 
 
 
