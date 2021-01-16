@@ -9,12 +9,19 @@ import os, sys
 import time
 import threading
 
+from datetime import datetime
+
 app = Flask(__name__)
 
 email_otp = {}
 
 @app.route('/generateOTP')
 def generateOTP(data):
+
+    """Generate the OTP
+       input : {email: ""}
+       output : bool 
+    """
 
     email = data['email']
 
@@ -43,6 +50,11 @@ def generateOTP(data):
 @app.route('/verifyOTP')
 def verify(data):
 
+    """Verify the OTP
+       input : {email : "", otp : ""}
+       output : bool
+    """
+
     email = data['email']
     otp = data['otp']
 
@@ -52,7 +64,6 @@ def verify(data):
     t = format(end - start)
 
     if float(t) >= 120:      # Check it the user enters above 2 minutes. So i set as >=120
-        ## messagebox.showinfo("Time out", "Session Expired ...Time out Please regenerate OTP")
         del email_otp[email] # delete the email id since otp is expired
         return False
 
@@ -70,6 +81,20 @@ def verify(data):
 @app.route('/updateDatabase')
 def updateDatabase(data):
 
+    """Insert the record into form table
+       input : {
+                    'firstName': "",
+                    'lastName' : "",
+                    'email' : "",
+                    'phone' : "",
+                    'location' : "",
+                    'pincode' : "",
+                    'numberOfPotholes' : "",
+                    'description' : ""
+                }
+        output : bool
+    """
+
     mydb = mysql.connector.connect(user='nkaushal', password='',
                                    host='127.0.0.1', database='mydatabse')
 
@@ -84,7 +109,7 @@ def updateDatabase(data):
     numOfPotholes = data['numOfPotholes']
     description = data['description']
 
-    sql = "INSERT INTO formtable (firstName, lastName, email, phone, location, pincode, numOfPotholes, description) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+    sql = "INSERT INTO mydatabase.formtable (firstName, lastName, email, phone, location, pincode, numOfPotholes, description) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')"
 
     values = (firstName, lastName, email, phone, location, pincode, numOfPotholes, description)
 
@@ -93,19 +118,18 @@ def updateDatabase(data):
     mydb.commit()
     # print(mycursor.rowcount, "record inserted.")
 
+    mydb.close()
+
     return True
 
 
-def formatReply(ans, reply):
-
-    reply = reply[2:-3]
-
-    ans = ans + ";"+ reply
-
-    return ans
-
 @app.route('/showReplies')
-def updateReply(data):
+def addReply(data):
+
+    """Function for admin to add the reply to a complaint
+       input : {email: "" , complaintId: "", reply: ""}
+       output: bool
+    """
 
     mydb = mysql.connector.connect(user='nkaushal', password='',
                                    host='127.0.0.1', database='mydatabse')
@@ -116,31 +140,31 @@ def updateReply(data):
     reply = data['reply']
     complaintId = data['complaintId']
 
-    email = "'"+email+"'"
+    replyDate = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    sql = "SELECT reply FROM replies WHERE emailId = %s AND complaintId = %s" %(email, 223)
-
-    mycursor.execute(sql)
-
-    ans = mycursor.fetchall()
-
-    finalReply = ""
-
-    if(len(ans) == 0):
-        finalReply = reply
-
-    else:
-        finalReply = formatReply(ans, reply)
-
-    new_sql = "UPDATE replies SET reply = %s WHERE emailId = %s AND complaintId = %s" %(finalReply, email, 223)
+    new_sql = "INSERT INTO mydatabase.replies (emailId, reply, complaintId, replyDate) VALUES ('%s', '%s', '%s', '%s')" % (email, reply, complaintId, replyDate)
 
     mycursor.execute(new_sql)
+
+    mydb.commit()
+
+    mydb.close()
 
     return True
 
 
 @app.route('/displayQueries')
-def displayQueries(data):
+def displayQueries(data): 
+
+    """ Displays replies to a particular user
+        input: {email: ""}
+        output: {email: 
+                    [ 
+                        {datetime: reply},
+                        {datetime: reply}
+                    ]
+                }
+    """
 
     mydb = mysql.connector.connect(user='nkaushal', password='',
                                    host='127.0.0.1', database='mydatabse')
@@ -149,17 +173,156 @@ def displayQueries(data):
 
     email = data['email']
 
-    email = "'"+email+"'"
-
-
-    sql = "SELECT reply FROM replies WHERE emailId = %s" %(email)
+    sql = "SELECT reply FROM mydatabase.replies WHERE emailId = '%s'" %(email)
 
     mycursor.execute(sql)
 
     ans = mycursor.fetchall()
 
+    finalAns = {}
+
+    finalAns[email] = []
+
+    for entry in ans:
+        finalAns[email].append({entry[-1] : entry[1]})
+
+    mydb.close()
+
+    return finalAns
 
 
+@app.route('/authAdmin')
+def authAdmin(data):
+
+    """To authenticate admin credentials
+       input: {id: "", password: ""}
+       output: bool
+    """
+
+    mydb = mysql.connector.connect(user='nkaushal', password='',
+                                   host='127.0.0.1', database='mydatabse')
+
+    mycursor = mydb.cursor()
+
+    id_1 = data['id']
+    password = data['password']
+
+    sql = "SELECT password FROM admintable WHERE id = '%s'" %(id_1)
+
+    mycursor.execute(sql)
+
+    ans = mycursor.fetchall()
+
+    mydb.close()
+
+    if(len(ans) == 0):
+        return False
+
+    else:
+        if(ans[0][0] == password):
+            return True
+        else:
+            return False
+
+
+@app.route('/registerAdmin')
+def registerAdmin(data):
+
+    """ To register the admin
+        input: {id: "", password: ""}
+        output: bool 
+    """
+
+    mydb = mysql.connector.connect(user='nkaushal', password='',
+                                   host='127.0.0.1', database='mydatabse')
+
+    mycursor = mydb.cursor()
+
+    id_1 = data['id']
+    password = data['password']
+
+    sql = "INSERT INTO admintable VALUES ('%s', '%s')" %(id_1, password)
+
+    mycursor.execute(sql)
+
+    mydb.commit()
+
+    mydb.close()
+
+    return True
+
+
+@app.route('/displayEverything')
+def displayEverything(data = None):
+
+    """ Display all complaints for the admin
+        input: None
+        output: {complaintId:
+                        {
+                            'firstName': "",
+                            'lastName' : "",
+                            'email' : "",
+                            'phone' : "",
+                            'location' : "",
+                            'pincode' : "",
+                            'numberOfPotholes' : "",
+                            'description' : ""
+                            'reply' : [
+                                {
+                                    date: reply1,
+                                    date: reply2
+                                }
+                            ]
+                        }
+                }
+    """
+
+    mydb = mysql.connector.connect(user='nkaushal', password='',
+                                   host='127.0.0.1', database='mydatabase')
+
+    mycursor = mydb.cursor()
+
+    sql = "SELECT * from formtable"
+
+    mycursor.execute(sql)
+
+    ans = mycursor.fetchall()
+
+    finalAns = {}
+
+    for entry in ans:
+
+        cid = entry[-1]
+        finalAns[cid] = {}
+
+        finalAns[cid]['email'] = entry[2]
+        finalAns[cid]['firstName'] = entry[0]
+        finalAns[cid]['lastName'] = entry[1]
+        finalAns[cid]['phone'] = entry[3]
+        finalAns[cid]['location'] = entry[4]
+        finalAns[cid]['pincode'] = entry[5]
+        finalAns[cid]['numberOfPotholes'] = entry[6]
+        finalAns[cid]['description'] = entry[7]
+
+        sql_1 = "SELECT * FROM replies WHERE complaintId = '%s'" % (cid)
+
+        mycursor.execute(sql_1)
+
+        ans_2 = mycursor.fetchall()
+
+        replyList = []
+
+        for row in ans_2:
+            replyList.append({row[-1]: row[1]})
+
+        finalAns[cid]['reply'] = replyList
+
+    mydb.close()
+
+    return finalAns
+
+
+    
 
 
 
