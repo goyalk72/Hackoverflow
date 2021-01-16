@@ -13,31 +13,39 @@ class ViewComplaint extends Component {
                           id : 1,
                           date : "12/12/12",
                           message : "spomethinf vhvj jbjb ubnknlmlk jbbnkn",
-                          status : "Open",
-                          reply : "",
-                          replyDate : "",
+                          status : true,
+                          replies: [
+                              {
+                                date: "12/12/12",
+                                msg: "the issue has been rsolved"
+                              },
+                              {
+                                  date: "23/12/12",
+                                  msg: "I am closing the issue"
+                              }
+                          ],
                           hasreplied: true
                         },
                         {
                           id : 2,
                           date : "12/12/12",
                           message : "spomethinf",
-                          status : "Open",
-                          reply : "",
-                          replyDate : "",
+                          status : false,
+                          replies: [],
                           hasreplied: false
                         }]
             }
     }
 
     componentDidMount(){
-        axios.get(URL+"/viewcomplain", {
-            params:{
-                email: this.props.location.state.emailid
-            }
-        }).then((res) => this.setState({
-            complaintsHistory: [...res]
-        })).catch(err => console.error(err));
+        // axios.get(URL+"/viewcomplain", {
+        //     params:{
+        //         email: this.props.location.state.emailid
+        //     }
+        // }).then((res) => this.setState({
+        //     complaintsHistory: [...res]
+        // })).catch(err => console.error(err));
+        console.log(this.state.complaintsHistory);
     }
 
     render(){
