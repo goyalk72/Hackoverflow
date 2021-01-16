@@ -3,7 +3,7 @@ import ComplaintForm from './ComplaintForm.js'
 import React, { Component } from 'react';
 import { Route, Switch, BrowserRouter, Redirect } from 'react-router-dom';
 import Login from './components/Login/Login';
-import Viewbyadmin from './components/Viewbyadmin/Viewbyadmin';
+import AuthLogin from './components/AuthLogin/AuthLogin';
 
 class App extends Component {
   render(){
@@ -11,7 +11,7 @@ class App extends Component {
       <BrowserRouter>
       <Switch>
         <Route path="/login" component={Login}></Route>
-        <Route path="/admin" component={Viewbyadmin}></Route>
+        <Route path="/admin" component={AuthLogin}></Route>
         <Route path="/" render={() => (<Redirect to="/login" />)} />
       </Switch>
       </BrowserRouter>

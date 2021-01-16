@@ -22,13 +22,17 @@ const Complaint = (props) => {
                     date= {rep.date}
                     msg = {rep.msg}/>   ));
 
+    console.log(props.status);
     const reply = props.hasreplied ? rep : null;
     const color = props.status ? "green" : "red";
     return (
         <div className={styles.Complaint} styles={{ backgroundColor: color}}> 
             <div className={styles.ComplaintFlex}> <b> Complaint ID: </b> {props.id}</div>
             <div className={styles.ComplaintFlex}> <b> Complaint Date: </b> {props.date }</div>
+            <div className={styles.ComplaintFlex}> <b> Location: </b>{ props.location}</div>
+            <div className={styles.ComplaintFlex}> <b> Pincode: </b>{ props.pincode}</div>
             <div className={styles.ComplaintFlex}> <b> Description: </b>{ props.message}</div>
+            <div className={styles.ComplaintFlex}> <b> Status: </b>{ props.status ? "Active":"Closed"}</div>
             {reply}
         </div>
     );
